@@ -3,7 +3,7 @@ import { ResumeData, JobRequirement, OptimizedResume } from '../types/resume';
 export class AIService {
   private static instance: AIService;
   private geminiApiKey: string;
-  private geminiApiUrl: string = 'https://generativelanguage.googleapis.com/v1/models/gemini-1.5-pro-002:generateContent';
+  private geminiApiUrl: string = 'https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash-002:generateContent';
 
   constructor() {
     const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
