@@ -1,16 +1,19 @@
 import { ResumeData, JobRequirement, OptimizedResume } from '../types/resume';
-import OpenAI from 'openai';
 
 export class AIService {
   private static instance: AIService;
-  private openai: OpenAI;
+  private geminiApiKey: string;
+private geminiApiUrl: string = 'https://generativelanguage.googleapis.com/v1/models/gemini-pro:generateContent';
+
   
   constructor() {
-    this.openai = new OpenAI({
-      apiKey: import.meta.env.VITE_OPENAI_API_KEY,
-      dangerouslyAllowBrowser: true // Only for demo - use backend in production
-    });
+  const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
+  if (!apiKey) {
+    throw new Error('Gemini API key is missing. Please set VITE_GEMINI_API_KEY in your environment variables.');
   }
+  // WARNING: Never expose your API key in frontend code in production. Use a backend proxy for security.
+  this.geminiApiKey = apiKey;
+}
   
   static getInstance(): AIService {
     if (!AIService.instance) {
@@ -22,8 +25,7 @@ export class AIService {
   // Mock OpenAI integration - replace with actual API calls in production
   async optimizeResume(resumeData: ResumeData, jobRequirement?: JobRequirement): Promise<OptimizedResume> {
     try {
-      const optimizedContent = await this.realOpenAICall(resumeData, jobRequirement);
-      
+      const optimizedContent = await this.realGeminiCall(resumeData, jobRequirement);
       return {
         ...resumeData,
         optimizedObjective: optimizedContent.objective,
@@ -33,33 +35,35 @@ export class AIService {
         atsScore: optimizedContent.atsScore,
       };
     } catch (error) {
-      console.error('AI optimization error:', error);
-      throw new Error('Failed to optimize resume with AI');
+      console.error('Gemini optimization error:', error);
+      throw new Error('Failed to optimize resume with Gemini AI');
     }
   }
 
-  private async realOpenAICall(resumeData: ResumeData, jobRequirement?: JobRequirement) {
+  private async realGeminiCall(resumeData: ResumeData, jobRequirement?: JobRequirement) {
     const prompt = await this.generateResumePrompt(resumeData, jobRequirement?.content || '');
-    
-    const completion = await this.openai.chat.completions.create({
-      model: "gpt-3.5-turbo",
-      messages: [
+    const body = {
+      contents: [
         {
-          role: "system",
-          content: "You are an expert resume writer and ATS optimization specialist. Analyze the user's information and job requirements to create an optimized resume that will score 95+ on ATS systems."
-        },
-        {
-          role: "user",
-          content: prompt
+          parts: [
+            { text: prompt }
+          ]
         }
-      ],
-      max_tokens: 2000,
-      temperature: 0.7
+      ]
+    };
+    const response = await fetch(`${this.geminiApiUrl}?key=${this.geminiApiKey}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(body)
     });
-
-    const aiResponse = completion.choices[0]?.message?.content || '';
-    
-    // Parse AI response and extract optimized content
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`Gemini API error: ${response.status} ${errorText}`);
+    }
+    const data = await response.json();
+    const aiResponse = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
     return this.parseAIResponse(aiResponse, resumeData, jobRequirement);
   }
 

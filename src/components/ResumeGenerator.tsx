@@ -228,7 +228,7 @@ const ResumeGenerator: React.FC = () => {
       {/* Tips */}
       <div className="mt-6 bg-yellow-50 p-4 rounded-lg border border-yellow-200">
         <h4 className="text-sm font-semibold text-yellow-800 mb-2">
-          🚀 Maximize Your ATS Score:
+           Maximize Your ATS Score:
         </h4>
         <ul className="text-sm text-yellow-700 space-y-1 list-disc pl-5">
           <li>Upload a job description to get personalized optimization</li>
