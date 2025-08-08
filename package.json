@@ -9,7 +9,7 @@
     "lint": "eslint .",
     "preview": "vite preview",
     "test": "echo \"Error: no test specified\" && exit 1",
-    "start": "react-scripts start"
+    "start":"vite preview"
   },
   "dependencies": {
     "@react-pdf/renderer": "^4.3.0",
