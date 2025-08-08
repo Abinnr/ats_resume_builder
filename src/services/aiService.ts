@@ -3,18 +3,17 @@ import { ResumeData, JobRequirement, OptimizedResume } from '../types/resume';
 export class AIService {
   private static instance: AIService;
   private geminiApiKey: string;
-private geminiApiUrl: string = 'https://generativelanguage.googleapis.com/v1/models/gemini-pro:generateContent';
+  private geminiApiUrl: string = 'https://generativelanguage.googleapis.com/v1/models/gemini-1.5-pro-002:generateContent';
 
-  
   constructor() {
-  const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
-  if (!apiKey) {
-    throw new Error('Gemini API key is missing. Please set VITE_GEMINI_API_KEY in your environment variables.');
+    const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
+    if (!apiKey) {
+      throw new Error('Gemini API key is missing. Please set VITE_GEMINI_API_KEY in your environment variables.');
+    }
+    // WARNING: Never expose your API key in frontend code in production. Use a backend proxy for security.
+    this.geminiApiKey = apiKey;
   }
-  // WARNING: Never expose your API key in frontend code in production. Use a backend proxy for security.
-  this.geminiApiKey = apiKey;
-}
-  
+
   static getInstance(): AIService {
     if (!AIService.instance) {
       AIService.instance = new AIService();
@@ -22,7 +21,6 @@ private geminiApiUrl: string = 'https://generativelanguage.googleapis.com/v1/mod
     return AIService.instance;
   }
 
-  // Mock OpenAI integration - replace with actual API calls in production
   async optimizeResume(resumeData: ResumeData, jobRequirement?: JobRequirement): Promise<OptimizedResume> {
     try {
       const optimizedContent = await this.realGeminiCall(resumeData, jobRequirement);
@@ -71,22 +69,18 @@ private geminiApiUrl: string = 'https://generativelanguage.googleapis.com/v1/mod
     // Parse the AI response to extract optimized sections
     // This is a simplified version - you'd implement proper parsing logic
     const lines = aiResponse.split('\n');
-    
     let optimizedObjective = resumeData.objective;
     let suggestedKeywords: string[] = [];
-    
     // Extract optimized objective (look for "SUMMARY:" or similar)
     const summaryIndex = lines.findIndex(line => line.toLowerCase().includes('summary') || line.toLowerCase().includes('objective'));
     if (summaryIndex !== -1 && summaryIndex + 1 < lines.length) {
       optimizedObjective = lines[summaryIndex + 1].trim();
     }
-    
     // Extract suggested keywords
     const keywordsIndex = lines.findIndex(line => line.toLowerCase().includes('keywords') || line.toLowerCase().includes('skills'));
     if (keywordsIndex !== -1 && keywordsIndex + 1 < lines.length) {
       suggestedKeywords = lines[keywordsIndex + 1].split(',').map(k => k.trim()).filter(k => k.length > 0);
     }
-    
     return {
       objective: optimizedObjective,
       experience: this.optimizeExperience(resumeData.workExperience, jobRequirement?.extractedKeywords || []),
@@ -96,57 +90,17 @@ private geminiApiUrl: string = 'https://generativelanguage.googleapis.com/v1/mod
     };
   }
 
-  private async mockOpenAICall(resumeData: ResumeData, jobRequirement?: JobRequirement) {
-    // Mock delay to simulate API call
-    await new Promise(resolve => setTimeout(resolve, 2000));
-
-    const jobKeywords = jobRequirement?.extractedKeywords || [];
-    const userSkills = resumeData.skills;
-    
-    // Mock AI optimization logic
-    const optimizedObjective = this.optimizeObjective(resumeData.objective, jobKeywords);
-    const optimizedExperience = this.optimizeExperience(resumeData.workExperience, jobKeywords);
-    const optimizedProjects = this.optimizeProjects(resumeData.projects, jobKeywords);
-    const suggestedKeywords = this.generateSuggestedKeywords(userSkills, jobKeywords);
-    const atsScore = this.calculateATSScore(resumeData, jobRequirement);
-
-    return {
-      objective: optimizedObjective,
-      experience: optimizedExperience,
-      projects: optimizedProjects,
-      suggestedKeywords,
-      atsScore,
-    };
-  }
-
-  private optimizeObjective(objective: string, jobKeywords: string[]): string {
-    if (!objective) return '';
-    
-    // Mock optimization: Add relevant keywords naturally
-    let optimized = objective;
-    
-    jobKeywords.slice(0, 3).forEach(keyword => {
-      if (!optimized.toLowerCase().includes(keyword.toLowerCase())) {
-        optimized = optimized.replace(/\.$/, `, with expertise in ${keyword}.`);
-      }
-    });
-
-    return optimized;
-  }
-
   private optimizeExperience(experience: ResumeData['workExperience'], jobKeywords: string[]) {
     return experience.map(exp => ({
       ...exp,
       responsibilities: exp.responsibilities.map(resp => {
         // Add action verbs and quantify achievements
         let optimized = resp;
-        
         if (!optimized.match(/^(Led|Managed|Developed|Implemented|Created|Built|Designed|Optimized)/)) {
           const actionVerbs = ['Developed', 'Implemented', 'Created', 'Built', 'Designed', 'Optimized'];
           const randomVerb = actionVerbs[Math.floor(Math.random() * actionVerbs.length)];
           optimized = `${randomVerb} ${optimized.charAt(0).toLowerCase() + optimized.slice(1)}`;
         }
-
         return optimized;
       }),
     }));
@@ -212,7 +166,6 @@ private geminiApiUrl: string = 'https://generativelanguage.googleapis.com/v1/mod
     return Math.min(100, Math.round(score));
   }
 
-  // Generate resume content using AI prompts
   async generateResumePrompt(resumeData: ResumeData, jobDescription: string = ''): Promise<string> {
     return `
 You are an expert resume writer and ATS optimization specialist. Create an optimized resume that will score 95+ on ATS systems.
